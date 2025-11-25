@@ -1,17 +1,23 @@
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;//för att fångar knapptryckning
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.control.Button;
+import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
+import javafx.scene.control.Label;
 import javafx.geometry.Insets;
-import javafx.scene.control.TextField;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Main extends Application{
     Stage window;
+    private final AtomicInteger seconds = new AtomicInteger(0);
+    private Thread time;
+    private Label timer;
+    private boolean running = false;
 
     public static void main(String[] args) {
     launch(args);
@@ -21,6 +27,7 @@ public class Main extends Application{
     public void start(Stage stage) throws Exception {
         window = stage;
         window.setTitle(" Medlemsformulär med tidtagarur (JavaFX, utan FXML) ");
+
 
         GridPane grid = new GridPane();
         grid.setPadding(new Insets(10,10,10,10));
@@ -67,7 +74,7 @@ public class Main extends Application{
         Label savedInfo = new Label();
         GridPane.setConstraints(savedInfo,1,4);
 
-        //Knapp
+        //Knappar
         Button saveButton = new Button("Spara");
         GridPane.setConstraints(saveButton,0,4);
         saveButton.setOnAction(e ->{
@@ -77,14 +84,53 @@ public class Main extends Application{
                     adressInput.getText() + " är sparad." );
         });
 
-        grid.getChildren().addAll(nameLabel, nameInput, lastName, lastnameInput,phoneNum, phoneInput,adress, adressInput,savedInfo, saveButton);
+        //Timer
+        timer = new Label("00:00:00");
+        GridPane.setConstraints(timer,1,10);
+
+        Button startButton = new Button("Start");
+        GridPane.setConstraints(startButton,0,10);
+        startButton.setOnAction(e->startCounting());
+
+        Button stopButton = new Button("Stop");
+        GridPane.setConstraints(stopButton,0,11);
+        stopButton.setOnAction(e->stopCounting());
+
+        grid.getChildren().addAll(nameLabel, nameInput, lastName, lastnameInput,phoneNum,
+                phoneInput,adress, adressInput,savedInfo,
+                saveButton,startButton,stopButton,timer);
 
         Scene scene = new Scene(grid,500,400);
         window.setScene(scene);
         window.show();
     }
-//    private void info(){
-//        String name = nameInput.getText()
-//        System.out.println();
-//    }
+    private void startCounting(){
+        stopCounting();
+        running = true;
+
+        time = new Thread(()->{
+            while(running){
+                try{
+                    Thread.sleep(500);
+                }catch(InterruptedException e){
+                    return;
+                }
+                int val = seconds.incrementAndGet();
+                int h = val / 3600;
+                int m = (val % 3600) / 60;
+                int s = val % 60;
+
+                Platform.runLater(()->timer.setText(String.format("%02d:%02d:%02d", h, m, s)));
+            }
+        });
+        time.setDaemon(true);
+        time.start();
+    }
+    private void stopCounting(){
+        running = false;
+        if(time !=null && time.isAlive()){
+            time.interrupt();
+        }
+    }
+
 }
